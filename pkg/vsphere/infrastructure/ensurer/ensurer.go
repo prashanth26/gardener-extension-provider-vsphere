@@ -39,7 +39,8 @@ type ensurer struct {
 	// connector for simplified API (NSXT policy)
 	connector vapiclient.Connector
 	// nsxtClient is the NSX Manager client - based on go-vmware-nsxt SDK (Advanced API)
-	nsxtClient *nsxt.APIClient
+	nsxtClient     *nsxt.APIClient
+	shootNamespace string
 }
 
 var _ task.EnsurerContext = &ensurer{}
@@ -64,7 +65,11 @@ func (e *ensurer) IsTryRecoverEnabled() bool {
 	return true
 }
 
-func NewNSXTInfrastructureEnsurer(logger logr.Logger, nsxtConfig *vinfra.NSXTConfig) (vinfra.NSXTInfrastructureEnsurer, error) {
+func (e *ensurer) ShootNamespace() string {
+	return e.shootNamespace
+}
+
+func NewNSXTInfrastructureEnsurer(logger logr.Logger, nsxtConfig *vinfra.NSXTConfig, shootNamespace string) (vinfra.NSXTInfrastructureEnsurer, error) {
 	log.SetLogger(NewLogrBridge(logger))
 	connector, err := createConnectorNiceError(nsxtConfig)
 	if err != nil {
@@ -76,9 +81,10 @@ func NewNSXTInfrastructureEnsurer(logger logr.Logger, nsxtConfig *vinfra.NSXTCon
 	}
 
 	return &ensurer{
-		logger:     logger,
-		connector:  connector,
-		nsxtClient: nsxClient,
+		logger:         logger,
+		connector:      connector,
+		nsxtClient:     nsxClient,
+		shootNamespace: shootNamespace,
 	}, nil
 }
 
@@ -238,4 +244,23 @@ func (e *ensurer) EnsureInfrastructureDeleted(spec *vinfra.NSXTInfraSpec, state 
 		}
 	}
 	return nil
+}
+
+func (e *ensurer) GetIPPoolTags(ipPoolName string) (map[string]string, error) {
+	id, _, err := task.LookupIPPoolIDByName(e, ipPoolName)
+	if err != nil {
+		return nil, err
+	}
+
+	client := infra.NewDefaultIpPoolsClient(e.Connector())
+	pool, err := client.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	tags := task.TagsToMap(pool.Tags)
+	return tags, nil
+}
+
+func (e *ensurer) CheckShootAuthorizationByTags(objectType, name string, tags map[string]string) error {
+	return task.CheckShootAuthorizationByTags(e.logger, objectType, name, e.shootNamespace, tags)
 }

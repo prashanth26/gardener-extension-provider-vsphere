@@ -22,6 +22,8 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/vmware/vsphere-automation-sdk-go/services/nsxt/model"
+
+	vinfra "github.com/gardener/gardener-extension-provider-vsphere/pkg/vsphere/infrastructure"
 )
 
 var _ = Describe("Helpers", func() {
@@ -106,6 +108,29 @@ var _ = Describe("Helpers", func() {
 	Describe("#IdFromPath", func() {
 		It("should extract id from path", func() {
 			Expect(IdFromPath("/infra/lb-services/60b86e75-41a0-474b-ab5d-ef46d3e1b25b")).To(Equal("60b86e75-41a0-474b-ab5d-ef46d3e1b25b"))
+		})
+	})
+})
+
+var _ = Describe("TaskHelper", func() {
+	Describe("#CheckShootAuthorizationByTags", func() {
+		It("should handle shoot authorization value correctly", func() {
+			tags := map[string]string{vinfra.ScopeAuthorizedShoots: "shoot--foo--bar1,shoot--myns--x*x"}
+			err := CheckShootAuthorizationByTags(nil, "IP pool", "mypool", "shoot--foo--bar1", tags)
+			Expect(err).NotTo(HaveOccurred())
+			err = CheckShootAuthorizationByTags(nil, "IP pool", "mypool", "shoot--myns--xfoox", tags)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = CheckShootAuthorizationByTags(nil, "IP pool", "mypool", "shoot--foo--bar", tags)
+			Expect(err).To(HaveOccurred())
+			err = CheckShootAuthorizationByTags(nil, "IP pool", "mypool", "shoot--foo--bar2", tags)
+			Expect(err).To(HaveOccurred())
+			err = CheckShootAuthorizationByTags(nil, "IP pool", "mypool", "shoot--myns--foo", tags)
+			Expect(err).To(HaveOccurred())
+			err = CheckShootAuthorizationByTags(nil, "IP pool", "mypool", "shoot--myns--xfoo", tags)
+			Expect(err).To(HaveOccurred())
+			err = CheckShootAuthorizationByTags(nil, "IP pool", "mypool", "shoot--myns--xfooxz", tags)
+			Expect(err).To(HaveOccurred())
 		})
 	})
 })

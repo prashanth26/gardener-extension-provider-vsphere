@@ -112,7 +112,7 @@ func (a *actuator) prepareReconcile(ctx context.Context, infra *extensionsv1alph
 		spec.ExternalTier1GatewayPath = &infraConfig.Networks.Tier1GatewayPath
 	}
 
-	infraEnsurer, err := ensurer.NewNSXTInfrastructureEnsurer(a.logger, nsxtConfig)
+	infraEnsurer, err := ensurer.NewNSXTInfrastructureEnsurer(a.logger, nsxtConfig, cluster.ObjectMeta.Name)
 	if err != nil {
 		return nil, err
 	}

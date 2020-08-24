@@ -37,6 +37,8 @@ type EnsurerContext interface {
 	IsTryRecoverEnabled() bool
 	// GetNSXTVersion retrieves the NSX-T version
 	GetNSXTVersion() (*string, error)
+	// ShootNamespace returns the shoot namespace used for authorization
+	ShootNamespace() string
 }
 
 type Task interface {
